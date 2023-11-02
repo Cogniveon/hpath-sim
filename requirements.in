@@ -1,2 +1,15 @@
-redis
+# REST SERVER
+flask
+
+# JOB SCHEDULING
 rq
+
+# DATA PROCESSING
+pandas
+openpyxl
+
+# MODEL PARSING AND SIMULATION
+pydantic
+dacite
+salabim
+greenlet
