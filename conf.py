@@ -1,0 +1,18 @@
+"""Configuration settings for the hpath app."""
+
+REDIS_HOST = 'redis'
+"""Hostname for the Redis server."""
+
+REDIS_PORT = 6379
+"""Port for the Redis server, default 6379 for unaltered Docker container
+(https://hub.docker.com/_/redis)."""
+
+DB_PATH = 'db/hpath.db'
+"""Path to the simulation job store, a SQLite database."""
+
+# During development, we may wish to start with a clean database upon
+# every launch.  For production, set this to True.
+DB_PERSISTENCE = False
+# DB_PERSISTENCE = True
+"""If false, builds a new empty database upon app launch. If true, use
+the existing database if found."""

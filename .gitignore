@@ -1,0 +1,14 @@
+__pycache__
+
+temp/
+db/
+requirements.txt
+
+# Python Environments
+.env
+.venv
+env/
+venv/
+
+# Redis
+dump.rdb
