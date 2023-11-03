@@ -11,8 +11,6 @@ from .types import HPathConfigParams, HPathSharedParams
 
 # NOTE: ALWAYS USE TRANSACTIONS WHEN UPDATING DATABASE
 
-# TODO: Handle DB errors gracefully -- should show error message on screen
-
 SQL_PERSIST = " IF NOT EXISTS" if DB_PERSISTENCE else ""
 
 SQL_INIT = f"""\
@@ -117,7 +115,7 @@ def submit_scenario(
 def submit_scenarios(
     configs: list[HPathConfigParams],
     params: HPathSharedParams
-):
+) -> list[int]:
     """Submit a list of scenarios as a single transaction, i.e. failure will rollback the
     entire transaction.
 
@@ -125,7 +123,7 @@ def submit_scenarios(
     """
     with sql.connect(DB_PATH) as conn:
         cur = conn.cursor()
-        scenario_ids = []
+        scenario_ids: list[int] = []
 
         try:
             # If multi-scenario analysis:
@@ -147,6 +145,7 @@ def submit_scenarios(
                 scenario_ids.append(scenario_id)
 
             conn.commit()
+            return scenario_ids
         except sql.Error as err:
             if conn.in_transaction():
                 conn.rollback()
