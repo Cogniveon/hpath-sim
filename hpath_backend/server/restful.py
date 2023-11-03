@@ -39,6 +39,7 @@ from io import BytesIO
 import json
 from http import HTTPStatus
 
+import flask
 from flask import Flask, Response, request
 from werkzeug.exceptions import HTTPException
 
@@ -123,7 +124,26 @@ def new_scenario_rest() -> Response:
 def list_scenarios_rest() -> Response:
     """Return a dict of scenarios on the server. Used to populate a Dash AG Grid."""
     scenarios = db.list_scenarios()
-    return scenarios
+    return scenarios.to_dict('records')
+
+
+@app.route('/scenarios/<scenario_id>/results/')
+def results_scenario_rest(scenario_id: int) -> Response:
+    """Process GET request for reading a scenario simulation result."""
+    not_found_text = f"Cannot find results for scenario with ID: '{scenario_id}'."
+
+    # Ensure scenario_id is integer-compatible
+    try:
+        s_id = int(scenario_id)
+    except ValueError:
+        flask.abort(HTTPStatus.NOT_FOUND, description=not_found_text)
+
+    # Fetch the scenario results
+    res = db.results_scenario(s_id)
+    if res.empty:
+        flask.abort(HTTPStatus.NOT_FOUND, description=not_found_text)
+
+    return res.to_dict('records')
 
 
 # TODO remaining endpoints

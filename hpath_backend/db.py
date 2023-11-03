@@ -11,6 +11,9 @@ from .types import HPathConfigParams, HPathSharedParams
 
 # NOTE: ALWAYS USE TRANSACTIONS WHEN UPDATING DATABASE
 
+# TODO: switch to named parameters for better code readability
+# https://docs.python.org/3/library/sqlite3.html#sqlite3.Cursor.execute
+
 SQL_PERSIST = " IF NOT EXISTS" if DB_PERSISTENCE else ""
 
 SQL_INIT = f"""\
@@ -56,6 +59,17 @@ FROM scenarios
 LEFT JOIN analyses ON scenarios.analysis_id = analyses.analysis_id
 """
 """SQLite command for listing the scenarios."""
+
+SQL_SCENARIO_RESULTS = """\
+SELECT
+    scenario_id,
+    scenario_name,
+    analysis_id,
+    results
+FROM scenarios
+WHERE scenario_id = ?
+"""
+"""SQLite command for fetching a single scenario's result."""
 
 SQL_INSERT_ANALYSIS = """\
 INSERT INTO analyses(analysis_name)
@@ -179,7 +193,7 @@ def save_result(scenario_id: int, result_json: str):
         raise err
 
 
-def list_scenarios() -> dict:
+def list_scenarios() -> pd.DataFrame:
     """Get the list of scenarios and convert to a dict for input to a Dash AG Grid.
 
     Connected to endpoint `scenarios/` on the REST server.
@@ -187,7 +201,17 @@ def list_scenarios() -> dict:
     try:
         with sql.connect(DB_PATH) as conn:
             df = pd.read_sql(SQL_LIST_SCENARIOS, conn)
-            return df.to_dict('records')
+            return df
+    except sql.Error as err:
+        raise err
+
+
+def results_scenario(scenario_id: int) -> pd.DataFrame:
+    """Return the results of a scenario task."""
+    try:
+        with sql.connect(DB_PATH) as conn:
+            df = pd.read_sql(SQL_SCENARIO_RESULTS, conn, params=(scenario_id, ))
+            return df
     except sql.Error as err:
         raise err
 
