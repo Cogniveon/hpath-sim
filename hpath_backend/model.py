@@ -6,16 +6,12 @@ not serialisable by the RQ (Redis job queue) module.
 """
 import dataclasses
 from dataclasses import dataclass
-import json
-import os
-import pathlib
 from typing import Literal
 
 import dacite
-import openpyxl
 import salabim as sim
 
-from . import process, kpis, util
+from . import process
 from .config import Config, DistributionInfo, IntDistributionInfo, ResourceInfo
 from .distributions import PERT, Constant, Distribution, IntPERT, Tri
 from .process import ArrivalGenerator, ProcessType, ResourceScheduler
@@ -282,13 +278,3 @@ class Model(sim.Environment):
     def run(self) -> None:  # pylint: disable=arguments-differ
         """Run the simulation for the duration set in ``self.sim_length``."""
         super().run(duration=self.sim_length)
-
-
-if __name__ == '__main__':
-    path = pathlib.Path(os.path.dirname(__file__)) / '../assets/examples/config.xlsx'
-    path = path.resolve()
-    print(path)
-    wbook = openpyxl.load_workbook(path, data_only=True)
-    model = Model(Config.from_workbook(wbook, sim_hours=6*7*24, num_reps=1))
-    model.run()
-    print(json.dumps(kpis.Report.from_model(model), default=util.serialiser))

@@ -656,8 +656,3 @@ class Config(pyd.BaseModel):
             sim_hours=sim_hours,
             num_reps=num_reps
         )
-
-
-if __name__ == '__main__':
-    config = Config.from_workbook(xl.load_workbook('config.xlsx', data_only=True), 6*7*24, 10)
-    print(config.model_dump_json())
