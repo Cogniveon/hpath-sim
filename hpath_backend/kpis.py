@@ -204,7 +204,7 @@ class Report:
     overall_tat: float
     lab_tat: float
     progress: Progress
-    lab_progress: Progress
+    lab_progress: LabProgress
     tat_by_stage: ChartData
     resource_allocation: dict[str, ChartData]  # ChartData for each resource
     wip_by_stage: MultiChartData
