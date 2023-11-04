@@ -1,8 +1,5 @@
 """Configuration settings for the hpath-sim app."""
 
-import os
-
-
 REDIS_HOST = 'redis'
 """Hostname for the Redis server."""
 

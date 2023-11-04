@@ -166,7 +166,8 @@ class Model(sim.Environment):
             A store containing completed specimens, so that statistics can be computed.
         wips (Wips):
             Dataclass instance containing work-in-progress counters for the model.
-        processes (dict[str, hpath.process.Process | hpath.process.BatchingProcess | hpath.process.CollationProcess]):
+        processes (dict[str, hpath.process.Process |
+        hpath.process.BatchingProcess | hpath.process.CollationProcess]):
             Dict mapping strings to the processes of the simulation model.
     """
 
