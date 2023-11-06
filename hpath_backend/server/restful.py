@@ -6,29 +6,29 @@ REST API
 ..
   #pylint: disable=line-too-long
 
-+---------------------------------------+-----------------+------------------------------------------------------+
-| **Endpoint**                          | **HTTP Method** | **Python function signature**                        |
-+=======================================+=================+======================================================+
-| ``/``                                 | GET             | :py:func:`~hpath.restful.server.hello_world()`       |
-+                                       +-----------------+------------------------------------------------------+
-|                                       | DELETE          | :py:func:`~hpath.restful.server.reset()`             |
-+---------------------------------------+-----------------+------------------------------------------------------+
-| ``/scenarios/``                       | POST            | :py:func:`~hpath.restful.server.new_scenario_rest`   |
-|                                       +-----------------+------------------------------------------------------+
-|                                       | GET             | :py:func:`~hpath.restful.server.list_scenarios_rest` |
-+---------------------------------------+-----------------+------------------------------------------------------+
-| ``/scenarios/<scenario_id>/status/``  | GET             | :py:func:`~hpath.restful.server.status_rest`         |
-+---------------------------------------+-----------------+------------------------------------------------------+
-| ``/scenarios/<scenario_id>/results/`` | GET             | :py:func:`~hpath.restful.server.results_rest`        |
-+---------------------------------------+-----------------+------------------------------------------------------+
-| ``/multi/``                           | POST            | :py:func:`~hpath.restful.server.new_multi_rest`      |
-|                                       +-----------------+------------------------------------------------------+
-|                                       | GET             | :py:func:`~hpath.restful.server.list_multis_rest`    |
-+---------------------------------------+-----------------+------------------------------------------------------+
-| ``/multi/<analysis_id>/status/``      | GET             | :py:func:`~hpath.restful.server.status_multi_rest`   |
-+---------------------------------------+-----------------+------------------------------------------------------+
-| ``/multi/<analysis_id>/results/``     | GET             | :py:func:`~hpath.restful.server.results_multi_rest`  |
-+---------------------------------------+-----------------+------------------------------------------------------+
++---------------------------------------+-----------------+-------------------------------------------------+
+| **Endpoint**                          | **HTTP Method** | **Python function signature**                   |
++=======================================+=================+=================================================+
+| ``/``                                 | GET             | :py:func:`~hpath.restful.server.hello_world()`  |
++                                       +-----------------+-------------------------------------------------+
+|                                       | DELETE          | :py:func:`~hpath.restful.server.reset()`        |
++---------------------------------------+-----------------+-------------------------------------------------+
+| ``/scenarios/``                       | POST            | :py:func:`~hpath.restful.server.new_scenario`   |
+|                                       +-----------------+-------------------------------------------------+
+|                                       | GET             | :py:func:`~hpath.restful.server.list_scenarios` |
++---------------------------------------+-----------------+-------------------------------------------------+
+| ``/scenarios/<scenario_id>/status/``  | GET             | :py:func:`~hpath.restful.server.status`         |
++---------------------------------------+-----------------+-------------------------------------------------+
+| ``/scenarios/<scenario_id>/results/`` | GET             | :py:func:`~hpath.restful.server.results`        |
++---------------------------------------+-----------------+-------------------------------------------------+
+| ``/multi/``                           | POST            | :py:func:`~hpath.restful.server.new_multi`      |
+|                                       +-----------------+-------------------------------------------------+
+|                                       | GET             | :py:func:`~hpath.restful.server.list_multis`    |
++---------------------------------------+-----------------+-------------------------------------------------+
+| ``/multi/<analysis_id>/status/``      | GET             | :py:func:`~hpath.restful.server.status_multi`   |
++---------------------------------------+-----------------+-------------------------------------------------+
+| ``/multi/<analysis_id>/results/``     | GET             | :py:func:`~hpath.restful.server.results_multi`  |
++---------------------------------------+-----------------+-------------------------------------------------+
 
 ..
   #pylint: enable=line-too-long
@@ -39,7 +39,6 @@ from io import BytesIO
 import json
 from http import HTTPStatus
 
-import flask
 from flask import Flask, Response, request
 from werkzeug.exceptions import HTTPException
 
@@ -93,8 +92,20 @@ def hello_world() -> Response:
     return "<h1>Hello World!</h1>"
 
 
+@app.route('/', methods=['DELETE'])
+def clear() -> Response:
+    """Clear the database."""
+    if request.json['delete'] != 'yes':  # TODO add proper app authentication
+        return Response(status=HTTPStatus.FORBIDDEN)
+    try:
+        db.clear()
+        return Response(status=HTTPStatus.OK)
+    except Exception as exc:  # Database error
+        return {'type': str(type(exc)), 'msg': str(exc)}, HTTPStatus.INTERNAL_SERVER_ERROR
+
+
 @app.route('/submit/', methods=['POST'])
-def new_scenario_rest() -> Response:
+def new_scenario() -> Response:
     """Process POST request for creating a new scenario or multi-scenario analysis."""
     sc_data: dict = request.json['scenarios']
     params_dict: dict = request.json['params']
@@ -103,45 +114,51 @@ def new_scenario_rest() -> Response:
         params = HPathSharedParams(**params_dict)
         configs = parse_sc_data(sc_data, params)
     except Exception as exc:  # Parse error
-        return {'type': type(exc), 'msg': str(exc)}, HTTPStatus.BAD_REQUEST
+        return {'type': str(type(exc)), 'msg': str(exc)}, HTTPStatus.BAD_REQUEST
 
     try:
         scenario_ids = db.submit_scenarios(configs, params)
     except Exception as exc:  # Database error
-        return {'type': type(exc), 'msg': str(exc)}, HTTPStatus.SERVICE_UNAVAILABLE
+        return {'type': str(type(exc)), 'msg': str(exc)}, HTTPStatus.INTERNAL_SERVER_ERROR
 
     try:
         for config, scenario_id in zip(configs, scenario_ids):
             config_obj = Config(**json.loads(config.config))
             HPATH_SIM_QUEUE.enqueue(simulate, config_obj, scenario_id)
     except Exception as exc:  # Redis error
-        return {'type': type(exc), 'msg': str(exc)}, HTTPStatus.SERVICE_UNAVAILABLE
+        return {'type': str(type(exc)), 'msg': str(exc)}, HTTPStatus.INTERNAL_SERVER_ERROR
 
     return Response(status=HTTPStatus.OK)
 
 
 @app.route('/scenarios/')
-def list_scenarios_rest() -> Response:
+def list_scenarios() -> Response:
     """Return a dict of scenarios on the server. Used to populate a Dash AG Grid."""
     scenarios = db.list_scenarios()
     return scenarios.to_dict('records')
 
 
 @app.route('/scenarios/<scenario_id>/results/')
-def results_scenario_rest(scenario_id: int) -> Response:
+def results_scenario(scenario_id: int) -> Response:
     """Process GET request for reading a scenario simulation result."""
     not_found_text = f"Cannot find results for scenario with ID: '{scenario_id}'."
+
+    class RowNotFoundError(Exception):
+        """Raised if a SQL SELECT statement returns zero rows."""
 
     # Ensure scenario_id is integer-compatible
     try:
         s_id = int(scenario_id)
-    except ValueError:
-        flask.abort(HTTPStatus.NOT_FOUND, description=not_found_text)
+    except ValueError as exc:
+        return {'type': str(type(exc)), 'msg': str(exc)}, HTTPStatus.NOT_FOUND
 
     # Fetch the scenario results
-    res = db.results_scenario(s_id)
-    if res.empty:
-        flask.abort(HTTPStatus.NOT_FOUND, description=not_found_text)
+    try:
+        res = db.results_scenario(s_id)
+        if res.empty:
+            raise RowNotFoundError(not_found_text)
+    except AssertionError as exc:
+        return {'type': str(type(exc)), 'msg': str(exc)}, HTTPStatus.NOT_FOUND
 
     return res.to_dict('records')
 

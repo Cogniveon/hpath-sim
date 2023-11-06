@@ -488,12 +488,6 @@ class Globals(pyd.BaseModel):
     prob_priority_non_cancer: Probability = pyd.Field(title='ProbPriorityNonCancer')
     """Probability that a non-cancer-pathway specimen has Priority priority."""
 
-    prob_routine_cancer: Probability = pyd.Field(title='ProbRoutineCancer')
-    """Probability that a cancer-pathway specimen has Routine/Cancer priority."""
-
-    prob_routine_non_cancer: Probability = pyd.Field(title='ProbRoutineNonCancer')
-    """Probability that a non-cancer-pathway specimen has Routine priority."""
-
     prob_prebook: Probability = pyd.Field(title='ProbPrebook')
     """Probability that a specimen requires pre-booking-in investigation."""
 
@@ -594,25 +588,41 @@ class Config(pyd.BaseModel):
     ) -> 'Config':
         """Load a config from an Excel workbook."""
         # wbook = xl.load_workbook(path, data_only=True)
+
+        # ARRIVAL SCHEDULES
+
         arrival_schedule_cancer_df = xlh.get_table(
             wbook, sheet_name='Arrival Schedules', name='ArrivalScheduleCancer'
         ).set_index('Hour')
+        arrival_schedule_cancer_df =\
+            arrival_schedule_cancer_df[arrival_schedule_cancer_df.index != 'Total']\
+            # pylint:disable=E1136
+
         arrival_schedule_noncancer_df = xlh.get_table(
             wbook, sheet_name='Arrival Schedules', name='ArrivalScheduleNonCancer'
         ).set_index('Hour')
+        arrival_schedule_noncancer_df =\
+            arrival_schedule_noncancer_df[arrival_schedule_noncancer_df.index != 'Total']\
+            # pylint:disable=E1136
+
         arrival_schedules = ArrivalSchedules(
             cancer=ArrivalSchedule.from_pd(arrival_schedule_cancer_df),
             noncancer=ArrivalSchedule.from_pd(arrival_schedule_noncancer_df)
         )
 
+        # RESOURCES
+
         resources_df = xlh.get_table(
-            wbook, sheet_name='Resources', name='Resources').fillna(0.0).set_index('Resource')
+            wbook, sheet_name='Resource Allocation', name='Resources')\
+                .fillna(0.0).set_index('Resource')
         resources_info = {key: ResourceInfo(
             name=field.title,
             type=field.json_schema_extra['resource_type'],
             schedule=ResourceSchedule.from_pd(resources_df, row_name=field.title)
         ) for key, field in ResourcesInfo.model_fields.items()}
         resources_info = ResourcesInfo(**resources_info)
+
+        # TASK DURATIONS
 
         tasks_df = xlh.get_table(
             wbook, sheet_name='Task Durations', name='TaskDurations').set_index('Task')
@@ -625,10 +635,14 @@ class Config(pyd.BaseModel):
         ) for key, field in TaskDurationsInfo.model_fields.items()}
         task_durations_info = TaskDurationsInfo(**task_durations_info)
 
+        # BATCH SIZES
+
         batch_sizes_df = xlh.get_table(
             wbook, sheet_name='Batch Sizes', name='BatchSizes').set_index('Batch Name')
         batch_sizes = {key: batch_sizes_df.loc[field.title, 'Size']
                        for key, field in BatchSizes.model_fields.items()}
+        
+        # GLOBAL PARAMETERS
 
         globals_float = {
             key: xlh.get_name(wbook, field.title) for key, field in Globals.model_fields.items()

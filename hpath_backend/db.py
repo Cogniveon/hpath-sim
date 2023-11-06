@@ -100,6 +100,15 @@ WHERE scenario_id = ?
 """
 """SQLite command for saving simulation results to database."""
 
+SQL_CLEAR = """\
+BEGIN TRANSACTION;
+DELETE FROM analyses;
+DELETE FROM scenarios;
+DELETE FROM sqlite_sequence;
+COMMIT;
+"""
+"""Clear all database tables."""
+
 
 def submit_scenario(
     name: str,
@@ -223,6 +232,17 @@ def init():
         with sql.connect(DB_PATH) as conn:
             cur = conn.cursor()
             cur.executescript(SQL_INIT)
+            conn.commit()
+    except sql.Error as err:
+        raise err
+
+def clear():
+    """Clear all database tables."""
+    try:
+        os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
+        with sql.connect(DB_PATH) as conn:
+            cur = conn.cursor()
+            cur.executescript(SQL_CLEAR)
             conn.commit()
     except sql.Error as err:
         raise err
