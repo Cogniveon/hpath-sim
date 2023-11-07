@@ -11,9 +11,6 @@ from .types import HPathConfigParams, HPathSharedParams
 
 # NOTE: ALWAYS USE TRANSACTIONS WHEN UPDATING DATABASE
 
-# TODO: switch to named parameters for better code readability
-# https://docs.python.org/3/library/sqlite3.html#sqlite3.Cursor.execute
-
 SQL_PERSIST = " IF NOT EXISTS" if DB_PERSISTENCE else ""
 
 SQL_INIT = f"""\
@@ -83,7 +80,6 @@ VALUES(?,?,?,?,?,?)
 """
 """SQLite command for creating a new simulation scenario."""
 
-# TODO: implement simulation runs properly, with confidence intervals
 SQL_UPDATE_PROGRESS = """\
 UPDATE scenarios
 SET done_reps = num_reps
