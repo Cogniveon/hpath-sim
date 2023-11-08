@@ -7,7 +7,7 @@ from conf import REDIS_HOST, REDIS_PORT
 
 REDIS_CONN = redis.Redis(
     host=REDIS_HOST,
-    port=REDIS_PORT  # default
+    port=REDIS_PORT
 )
 """Provides an connection to the redis server at ``redis://<REDIS_HOST>:<REDIS_PORT>``."""
 
