@@ -196,9 +196,9 @@ def processing_assign_queue(self: Block) -> None:
 
     if self.prio == Priority.URGENT:
         out_queue = env.processes["batcher.processing_urgents"].in_queue
-    if self.data["block_type"] == "small surgical":
+    elif self.data["block_type"] == "small surgical":
         out_queue = env.processes["batcher.processing_smalls"].in_queue
-    if self.data["block_type"] == "large surgical":
+    elif self.data["block_type"] == "large surgical":
         out_queue = env.processes["batcher.processing_larges"].in_queue
     else:
         out_queue = env.processes["batcher.processing_megas"].in_queue
