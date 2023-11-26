@@ -555,6 +555,30 @@ class Globals(pyd.BaseModel):
     """Parameters for the number of slides produced for a serials microtomy task."""
 
 
+class MockCounts(pyd.BaseModel):
+    """Stores the initial number of mock specimens for the simulation model when
+    `Config.opt_initial_specimens` is `'mock'`."""
+
+    reception_cancer: pyd.NonNegativeInt = pyd.Field(title='Reception (cancer)')
+    reception_noncancer: pyd.NonNegativeInt = pyd.Field(title='Reception (non-cancer)')
+    cutup_cancer: pyd.NonNegativeInt = pyd.Field(title='Cut-up (cancer)')
+    cutup_noncancer: pyd.NonNegativeInt = pyd.Field(title='Cut-up (non-cancer)')
+    processing_cancer: pyd.NonNegativeInt = pyd.Field(title='Processing (cancer)')
+    processing_noncancer: pyd.NonNegativeInt = pyd.Field(title='Processing (non-cancer)')
+    microtomy_cancer: pyd.NonNegativeInt = pyd.Field(title='Microtomy (cancer)')
+    microtomy_noncancer: pyd.NonNegativeInt = pyd.Field(title='Microtomy (non-cancer)')
+    staining_cancer: pyd.NonNegativeInt = pyd.Field(title='Staining (cancer)')
+    staining_noncancer: pyd.NonNegativeInt = pyd.Field(title='Staining (non-cancer)')
+    labelling_cancer: pyd.NonNegativeInt = pyd.Field(title='Labelling (cancer)')
+    labelling_noncancer: pyd.NonNegativeInt = pyd.Field(title='Labelling (non-cancer)')
+    scanning_cancer: pyd.NonNegativeInt = pyd.Field(title='Scanning (cancer)')
+    scanning_noncancer: pyd.NonNegativeInt = pyd.Field(title='Scanning (non-cancer)')
+    qc_cancer: pyd.NonNegativeInt = pyd.Field(title='QC (cancer)')
+    qc_noncancer: pyd.NonNegativeInt = pyd.Field(title='QC (non-cancer)')
+    reporting_cancer: pyd.NonNegativeInt = pyd.Field(title='Reporting (cancer)')
+    reporting_noncancer: pyd.NonNegativeInt = pyd.Field(title='Reporting (non-cancer)')
+
+
 class Config(pyd.BaseModel):
     """Configuration settings for the histopathlogy department model."""
 
@@ -578,6 +602,19 @@ class Config(pyd.BaseModel):
 
     num_reps: pyd.NonNegativeInt = pyd.Field(title='Number of simulation replications')
     """Number of simulation replications to run."""
+
+    # TODO: add 'from_file' option for reading initial specimen data from file
+    opt_initial_specimens: ty.Literal['mock', 'none']\
+        = pyd.Field(title='Bootstrap initial state')
+    """Option to bootstrap the simulation startup state using either dynamically generated
+    mock specimens or specimen data from the config file."""
+
+    mock_counts: ty.Optional[MockCounts] = pyd.Field(title='Mock Specimen Counts')
+    """Mock specimen counts, used when `opt_initial_specimens` is 'from_file'."""
+
+    # TODO: enable feature (change type to bool)
+    opt_travel_times: ty.Literal[False] = pyd.Field(title='Use travel times')
+    """Option to read travel time between locations from file."""
 
     @staticmethod
     def from_workbook(
@@ -614,7 +651,7 @@ class Config(pyd.BaseModel):
 
         resources_df = xlh.get_table(
             wbook, sheet_name='Resource Allocation', name='Resources')\
-                .fillna(0.0).set_index('Resource')
+            .fillna(0.0).set_index('Resource')
         resources_info = {key: ResourceInfo(
             name=field.title,
             type=field.json_schema_extra['resource_type'],
@@ -641,7 +678,7 @@ class Config(pyd.BaseModel):
             wbook, sheet_name='Batch Sizes', name='BatchSizes').set_index('Batch Name')
         batch_sizes = {key: batch_sizes_df.loc[field.title, 'Size']
                        for key, field in BatchSizes.model_fields.items()}
-        
+
         # GLOBAL PARAMETERS
 
         globals_float = {
@@ -660,6 +697,28 @@ class Config(pyd.BaseModel):
         }
         global_vars = Globals(**globals_float, **globals_dists)
 
+        # OPTION: INITIAL SPECIMENS
+
+        opt_initial_specimens = xlh.get_name(wbook, name='OptSpecimenBootstrap')
+        opt_initial_specimens = (
+            'mock' if opt_initial_specimens == 'Yes'
+            else 'none'
+        )
+
+        # INITIAL SPECIMENS (MOCK)
+
+        if opt_initial_specimens == 'mock':
+            mock_counts_df = xlh.get_table(
+                wbook, sheet_name='Bootstrap Mock Generator', name='MockCounts').set_index('Stage')
+            mock_counts = {}
+            for key, field in MockCounts.model_fields.items():
+                row_name, col = field.title.rsplit(' ', 1)
+                col_name = 'Cancer' if col == '(cancer)' else 'NonCancer'
+                mock_counts[key] = mock_counts_df.loc[row_name, col_name]
+            mock_counts = MockCounts(**mock_counts)
+        else:
+            mock_counts = None
+
         # Call __init__()
         return Config(
             arrival_schedules=arrival_schedules,
@@ -667,6 +726,9 @@ class Config(pyd.BaseModel):
             task_durations_info=task_durations_info,
             batch_sizes=batch_sizes,
             global_vars=global_vars,
+            opt_initial_specimens=opt_initial_specimens,
+            mock_counts=mock_counts,
+            opt_travel_times = False,
             sim_hours=sim_hours,
             num_reps=num_reps
         )
