@@ -46,7 +46,16 @@ class Specimen(Component):
         self.blocks: list[Block] = []
 
         dist = 'cancer' if self.data['cancer'] else 'non_cancer'
-        cdf = sim.CumPdf((
+
+        self.data['source'] = sim.CumPdf(
+            (
+                "Internal", env.globals.prob_internal,
+                "External", 1
+            ),
+            env=env
+        ).sample()
+
+        self.prio: Priority = sim.CumPdf((
             Priority.URGENT,
             getattr(env.globals, 'prob_urgent_' + dist),
 
@@ -55,9 +64,8 @@ class Specimen(Component):
             getattr(env.globals, 'prob_priority_' + dist),
 
             (Priority.CANCER if dist == "cancer" else Priority.ROUTINE),
-            1
-        ))
-        self.prio: Priority = cdf.sample()
+            1,
+        ), env=env).sample()
         self.data['priority'] = self.prio.name
 
     def process(self) -> None:

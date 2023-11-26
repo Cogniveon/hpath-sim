@@ -44,13 +44,6 @@ def arrive_reception(self: Specimen) -> None:
     env.wips.in_reception.value += 1
 
     self.data['reception_start'] = env.now()
-    self.data['source'] = sim.CumPdf(
-        (
-            "Internal", env.globals.prob_internal,
-            "External", 1
-        ),
-        env=env
-    ).sample()
 
     # For booking-in staff, receiving new specimens always takes priority
     # over all non-urgent booking-in tasks
