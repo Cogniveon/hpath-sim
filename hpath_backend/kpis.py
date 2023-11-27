@@ -1,9 +1,10 @@
 """Compute KPIs for a model from simulation results."""
-from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, TypedDict, Iterable
+from typing import TYPE_CHECKING, Iterable
+from typing_extensions import TypedDict
 
 import numpy as np
 import pandas as pd
+import pydantic as pyd
 import salabim as sim
 
 from . import util
@@ -11,6 +12,8 @@ from .chart_datatypes import ChartData, MultiChartData
 
 if TYPE_CHECKING:
     from .model import Model
+
+# TODO: create confidence-interval versions of the below KPI functions
 
 
 def wip_hourly(wip: sim.Monitor) -> pd.DataFrame:
@@ -122,7 +125,7 @@ def q_length_means(mdl: 'Model') -> pd.DataFrame:
     return pd.DataFrame({'mean': ret})
 
 
-def allocation_timeseries(res: sim.Resource):
+def allocation_timeseries(res: sim.Resource) -> pd.DataFrame:
     """Return a dataframe showing the allocation level of a resource."""
     df = pd.DataFrame(res.capacity.tx())\
         .T\
@@ -197,8 +200,7 @@ LabProgress = TypedDict('LabProgress', {
 """Returns the proportion of specimens with lab component completed within three days."""
 
 
-@dataclass(kw_only=True)
-class Report:
+class Report(pyd.BaseModel):
     """Dataclass for reporting a set of KPIs for passing to a frontend visualisation server.
     In the current implementation, this is https://github.com/lakeesiv/digital-twin"""
     overall_tat: float
@@ -210,16 +212,16 @@ class Report:
     wip_by_stage: MultiChartData
     utilization_by_resource: ChartData
     q_length_by_resource: ChartData
-    hourly_utilization_by_resource: MultiChartData
+    hourly_utilization_by_resource: MultiChartData 
 
-    overall_tat_min: float | None = field(default=None)
-    overall_tat_max: float | None = field(default=None)
-    lab_tat_min: float | None = field(default=None)
-    lab_tat_max: float | None = field(default=None)
-    progress_min: Progress | None = field(default=None)
-    progress_max: Progress | None = field(default=None)
-    lab_progress_min: LabProgress | None = field(default=None)
-    lab_progress_max: LabProgress | None = field(default=None)
+    overall_tat_min: float | None = pyd.Field(default=None)
+    overall_tat_max: float | None = pyd.Field(default=None)
+    lab_tat_min: float | None = pyd.Field(default=None)
+    lab_tat_max: float | None = pyd.Field(default=None)
+    progress_min: Progress | None = pyd.Field(default=None)
+    progress_max: Progress | None = pyd.Field(default=None)
+    lab_progress_min: LabProgress | None = pyd.Field(default=None)
+    lab_progress_max: LabProgress | None = pyd.Field(default=None)
 
     @staticmethod
     def from_model(mdl: 'Model') -> 'Report':
@@ -241,7 +243,7 @@ class Report:
             utilization_by_resource=ChartData.from_pandas(utilisation_means(mdl)),
             q_length_by_resource=ChartData.from_pandas(q_length_means(mdl)),
             hourly_utilization_by_resource=MultiChartData.from_pandas(
-                utilisation_hourlies(mdl)),
+                utilisation_hourlies(mdl))
         )
 
 
