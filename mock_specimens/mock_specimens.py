@@ -10,19 +10,20 @@ however, mock specimens should be excluded from computing average delay
 statistics.
 """
 
-from typing import Callable, Self
-
-from hpath_backend.model import Model
+from typing import Callable, Self, TYPE_CHECKING
 from hpath_backend.specimens import Priority, Specimen, Block, Slide
+
+if TYPE_CHECKING:
+    from hpath_backend.model import Model
 
 
 class InitSpecimen(Specimen):
     """Special subclass of `Specimen` for specimens already in progress at simulation start."""
 
-    def reception(self) -> None:
+    def init_reception(self) -> None:
         """Generate task_durations for specimen that has already completed Reception
         at simulation start."""
-        env: Model = self.env
+        env: 'Model' = self.env
 
         # Receive and sort
         elapsed_time = env.task_durations.receive_and_sort()
@@ -52,7 +53,7 @@ class InitSpecimen(Specimen):
         self.data['bootstrap']['reception_to_cutup']\
             = env.processes['reception_to_cutup'].out_duration
 
-    def cut_up(self) -> None:
+    def init_cut_up(self) -> None:
         """Generate task_durations for specimen that has already completed Cut-Up
         at simulation start."""
         env: Model = self.env
@@ -77,6 +78,7 @@ class InitSpecimen(Specimen):
             self.data["cutup_type"] = 'Pool'
 
             # One large surgical block
+            self.data['num_blocks'] = 1
             self.blocks.append(Block(
                 f'{self.name()}.',
                 env=env,
@@ -97,6 +99,7 @@ class InitSpecimen(Specimen):
                 n_blocks = env.globals.num_blocks_large_surgical()
                 block_type = 'large surgical'
 
+            self.data['num_blocks'] = n_blocks
             for _ in range(n_blocks):
                 block = Block(
                     f'{self.name()}.',
@@ -116,8 +119,12 @@ class InitSpecimen(Specimen):
             if self.data["cutup_type"] == 'Pool'
             else env.processes['cutup_large_to_processing'].out_duration
         )
+    
+    # NOTE: to avoid name clashes with regular Specimen processes (which are added to the
+    # Specimen using setattr() in each of the `hpath_backend.process` submodules), we must
+    # use a "init_" prefix for the functions below.
 
-    def processing(self) -> None:
+    def init_processing(self) -> None:
         """Generate task_durations for specimen that has already completed Processing
         at simulation start."""
         env: Model = self.env
@@ -159,7 +166,7 @@ class InitSpecimen(Specimen):
         self.data['bootstrap']['processing_to_microtomy'] \
             = env.processes['processing_to_microtomy'].out_duration
 
-    def microtomy(self) -> None:
+    def init_microtomy(self) -> None:
         """Generate task_durations for specimen that has already completed Microtomy
         at simulation start."""
         env: Model = self.env
@@ -206,7 +213,7 @@ class InitSpecimen(Specimen):
         self.data['bootstrap']['microtomy_to_staining'] \
             = env.processes['microtomy_to_staining'].out_duration
 
-    def staining(self) -> None:
+    def init_staining(self) -> None:
         """Generate task_durations for specimen that has already completed Staining
         at simulation start."""
         env: Model = self.env
@@ -235,7 +242,7 @@ class InitSpecimen(Specimen):
         self.data['bootstrap']['staining_to_labelling'] \
             = env.processes['staining_to_labelling'].out_duration
 
-    def labelling(self) -> None:
+    def init_labelling(self) -> None:
         """Generate task_durations for specimen that has already completed Labelling
         at simulation start."""
         env: Model = self.env
@@ -251,7 +258,7 @@ class InitSpecimen(Specimen):
         self.data['bootstrap']['labelling_to_scanning'] \
             = env.processes['labelling_to_scanning'].out_duration
 
-    def scanning(self) -> None:
+    def init_scanning(self) -> None:
         """Generate task_durations for specimen that has already completed Scanning
         at simulation start."""
         env: Model = self.env
@@ -272,7 +279,7 @@ class InitSpecimen(Specimen):
         self.data['bootstrap']['scanning_to_qc'] \
             = env.processes['scanning_to_qc'].out_duration
 
-    def qc(self) -> None:
+    def init_qc(self) -> None:
         """Generate task_durations for specimen that has already completed QC
         at simulation start."""
         env: Model = self.env
@@ -284,14 +291,14 @@ class InitSpecimen(Specimen):
         self.insert_point = kwargs.get('insert_point', 'arrive_reception')
         self.data['bootstrap']: dict[str, float] = {}
         self.preprocess: dict[str, Callable[[Self], None]] = {
-            'reception': self.reception,
-            'cut-up': self.cut_up,
-            'processing': self.processing,
-            'microtomy': self.microtomy,
-            'staining': self.staining,
-            'labelling': self.labelling,
-            'scanning': self.scanning,
-            'qc': self.qc
+            'reception': self.init_reception,
+            'cutup': self.init_cut_up,
+            'processing': self.init_processing,
+            'microtomy': self.init_microtomy,
+            'staining': self.init_staining,
+            'labelling': self.init_labelling,
+            'scanning': self.init_scanning,
+            'qc': self.init_qc
         }
 
     def compute_timestamps(self) -> None:
@@ -339,3 +346,7 @@ class InitSpecimen(Specimen):
             self.data['reception_start'] = timestamp
         # else, specimen is waiting to start reception and will be assigned a 'reception_start'
         # timestamp of 0 when the simulation starts
+
+    def process(self) -> None:
+        """Overrides `super().process` as we will insert the specimen into the simulation model
+        manually.  Does nothing."""

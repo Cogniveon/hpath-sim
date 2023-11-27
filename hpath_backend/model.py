@@ -11,6 +11,7 @@ from typing import Literal
 import dacite
 import salabim as sim
 
+from mock_specimens.mock_specimens import InitSpecimen
 from . import process
 from .config import Config, DistributionInfo, IntDistributionInfo, ResourceInfo
 from .distributions import PERT, Constant, Distribution, IntPERT, Tri
@@ -274,6 +275,50 @@ class Model(sim.Environment):
 
         # FREQUENTLY USED DISTRIBUTIONS
         self.u01 = sim.Uniform(0, 1, time_unit=None, env=self)
+
+        # INITIAL SPECIMENS (MOCK)
+        stages = ['reception', 'cutup', 'processing', 'microtomy', 'staining',
+                  'labelling', 'scanning', 'qc', 'reporting']
+        insert_points = [
+            'arrive_reception',
+            'cutup_start',
+            'processing_start',
+            'microtomy',
+            'staining_start',
+            'labelling',
+            'scanning_start',
+            'qc',
+            'assign_histopath'
+        ]
+
+        if config.opt_initial_specimens == 'mock':
+            init_specimens: list[InitSpecimen] = []
+            for idx, stage in enumerate(stages):
+                insert_point = insert_points[idx]
+                for pathway in ['cancer', 'noncancer']:
+                    mock_count = getattr(config.mock_counts, f'{stage}_{pathway}')
+                    for _ in range(mock_count):
+                        specimen = InitSpecimen(env=self, cancer=pathway == 'cancer')
+
+                        # Generate timestamps
+                        for stage2 in stages[:idx]:
+                            specimen.preprocess[stage2]()
+                        specimen.compute_timestamps()
+                        specimen.data['insert_point'] = insert_point
+
+                        init_specimens.append(specimen)
+
+            # Sort by time
+            init_specimens.sort(key=lambda item: item.data.get('reception_start', self.now()))
+
+            # Insert mock specimens
+            for specimen in init_specimens:
+                insert_point = specimen.data['insert_point']
+                if insert_point == 'arrive_reception':
+                    self.processes[insert_point].in_queue.add(specimen)
+                else:
+                    self.processes[insert_point].in_queue.add_sorted(specimen, specimen.prio)
+                    self.wips.total.value += 1
 
     def run(self) -> None:  # pylint: disable=arguments-differ
         """Run the simulation for the duration set in ``self.sim_length``."""

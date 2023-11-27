@@ -13,8 +13,6 @@ PORT = 5000
 DB_PATH = "/db/hpath.db"
 """Path to the simulation job store, a SQLite database."""
 
-print(DB_PATH)
-
 # During development, we may wish to start with a clean database upon
 # every launch.  For production, set this to True.
 # DB_PERSISTENCE = False

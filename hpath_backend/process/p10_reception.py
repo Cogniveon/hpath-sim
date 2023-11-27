@@ -2,8 +2,6 @@
 
 from typing import TYPE_CHECKING
 
-import salabim as sim
-
 from ..specimens import Priority, Specimen
 from .__core import Batch, BatchingProcess, DeliveryProcess, Process
 
