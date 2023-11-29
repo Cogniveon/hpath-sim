@@ -123,6 +123,9 @@ class InitSpecimen(Specimen):
     # NOTE: to avoid name clashes with regular Specimen processes (which are added to the
     # Specimen using setattr() in each of the `hpath_backend.process` submodules), we must
     # use a "init_" prefix for the functions below.
+    #
+    # More specifically, each `hpath_backend.process` submodule calls Process.__init__(),
+    # which in turn calls Specimen.setattr().
 
     def init_processing(self) -> None:
         """Generate task_durations for specimen that has already completed Processing
