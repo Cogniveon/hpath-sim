@@ -13,3 +13,6 @@ pydantic
 dacite
 salabim
 greenlet
+
+# SHORTEST PATHS
+networkx

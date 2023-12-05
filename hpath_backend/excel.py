@@ -60,8 +60,8 @@ def get_named_matrix(wbook: xl.Workbook, index_name: str, data_name: str
     for i, from_loc in enumerate(names):
         ret[from_loc] = {}
         for j, to_loc in enumerate(names):
-            if i != j:
-                ret[from_loc][to_loc] = float(data[i][j])
+                if data[i][j] is not None:
+                    ret[from_loc][to_loc] = float(data[i][j])
     return ret
 
 
