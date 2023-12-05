@@ -7,6 +7,7 @@ objects used for :py:class:`~salabim.Resource` tracking, etc.
 """
 import typing as ty
 
+import networkx as nx
 import openpyxl as xl
 import pandas as pd
 import pydantic as pyd
@@ -579,6 +580,50 @@ class MockCounts(pyd.BaseModel):
     reporting_noncancer: pyd.NonNegativeInt = pyd.Field(title='Reporting (non-cancer)')
 
 
+class RunnerTimeRow(pyd.BaseModel):
+    """Represents a row in the weighted adjaceny matrix containing travel times (in seconds)
+    between histopathology locations."""
+    model_config = pyd.ConfigDict(populate_by_name=True)
+
+    specimen_reception: pyd.NonNegativeFloat = pyd.Field(alias='Specimen Reception')
+    lilac_room: pyd.NonNegativeFloat = pyd.Field(alias='Lilac Room')
+    white_room: pyd.NonNegativeFloat = pyd.Field(alias='White Room')
+    yellow_room: pyd.NonNegativeFloat = pyd.Field(alias='Yellow Room')
+    green_room: pyd.NonNegativeFloat = pyd.Field(alias='Green Room')
+    processing_room: pyd.NonNegativeFloat = pyd.Field(alias='Processing Room')
+    first_floor_corridor_d7: pyd.NonNegativeFloat = pyd.Field(alias='First Floor Corridor D7')
+    main_lab: pyd.NonNegativeFloat = pyd.Field(alias='Main Lab')
+    staining_room: pyd.NonNegativeFloat = pyd.Field(alias='Staining Room')
+    second_floor_landing: pyd.NonNegativeFloat = pyd.Field(alias='Second Floor Landing')
+    second_floor_lift_door: pyd.NonNegativeFloat = pyd.Field(alias='Second Floor Lift Door')
+    first_floor_landing: pyd.NonNegativeFloat = pyd.Field(alias='First Floor Landing')
+    first_floor_lift_door: pyd.NonNegativeFloat = pyd.Field(alias='First Floor Lift Door')
+    first_floor_corridor_d14: pyd.NonNegativeFloat = pyd.Field(alias='First Floor Corridor D14')
+    first_floor_corridor_d15: pyd.NonNegativeFloat = pyd.Field(alias='First Floor Corridor D15')
+    digital_pathology: pyd.NonNegativeFloat = pyd.Field(alias='Digital Pathology')
+
+class RunnerTimes(pyd.BaseModel):
+    """Represents a matrix of travel times between histopathology locations."""
+    model_config = pyd.ConfigDict(populate_by_name=True)
+
+    specimen_reception: RunnerTimeRow = pyd.Field(alias='Specimen Reception')
+    lilac_room: RunnerTimeRow = pyd.Field(alias='Lilac Room')
+    white_room: RunnerTimeRow = pyd.Field(alias='White Room')
+    yellow_room: RunnerTimeRow = pyd.Field(alias='Yellow Room')
+    green_room: RunnerTimeRow = pyd.Field(alias='Green Room')
+    processing_room: RunnerTimeRow = pyd.Field(alias='Processing Room')
+    first_floor_corridor_d7: RunnerTimeRow = pyd.Field(alias='First Floor Corridor D7')
+    main_lab: RunnerTimeRow = pyd.Field(alias='Main Lab')
+    staining_room: RunnerTimeRow = pyd.Field(alias='Staining Room')
+    second_floor_landing: RunnerTimeRow = pyd.Field(alias='Second Floor Landing')
+    second_floor_lift_door: RunnerTimeRow = pyd.Field(alias='Second Floor Lift Door')
+    first_floor_landing: RunnerTimeRow = pyd.Field(alias='First Floor Landing')
+    first_floor_lift_door: RunnerTimeRow = pyd.Field(alias='First Floor Lift Door')
+    first_floor_corridor_d14: RunnerTimeRow = pyd.Field(alias='First Floor Corridor D14')
+    first_floor_corridor_d15: RunnerTimeRow = pyd.Field(alias='First Floor Corridor D15')
+    digital_pathology: RunnerTimeRow = pyd.Field(alias='Digital Pathology')
+
+
 class Config(pyd.BaseModel):
     """Configuration settings for the histopathlogy department model."""
 
@@ -612,9 +657,11 @@ class Config(pyd.BaseModel):
     mock_counts: ty.Optional[MockCounts] = pyd.Field(title='Mock Specimen Counts')
     """Mock specimen counts, used when `opt_initial_specimens` is 'from_file'."""
 
-    # TODO: enable feature (change type to bool)
-    opt_travel_times: ty.Literal[False] = pyd.Field(title='Use travel times')
+    opt_runner_times: bool = pyd.Field(title='Use travel times')
     """Option to read travel time between locations from file."""
+
+    runner_times: RunnerTimes = pyd.Field(title='Travel times')
+    """Travel time between locations in the histopathology department."""
 
     @staticmethod
     def from_workbook(
@@ -718,6 +765,23 @@ class Config(pyd.BaseModel):
             mock_counts = MockCounts(**mock_counts)
         else:
             mock_counts = None
+        
+        # OPTION: RUNNER TIMES
+
+        opt_travel_times = xlh.get_name(wbook, name='OptTravelTimes') == 'Yes'
+
+        # RUNNER TIMES
+        if opt_travel_times:
+            data = xlh.get_named_matrix(wbook, index_name='LocationNames', data_name='RunnerTimes')
+            df = pd.DataFrame(data).T
+            df.insert(0,'Specimen Reception', float('nan'))
+            df.fillna(0, inplace=True)
+            runner_times = df + df.T
+            g = nx.from_pandas_adjacency(runner_times)
+            runner_times = RunnerTimes(**dict(nx.shortest_path_length(g, weight='weight')))
+        else:
+            runner_times = None
+
 
         # Call __init__()
         return Config(
@@ -728,7 +792,8 @@ class Config(pyd.BaseModel):
             global_vars=global_vars,
             opt_initial_specimens=opt_initial_specimens,
             mock_counts=mock_counts,
-            opt_travel_times = False,
+            opt_runner_times = opt_travel_times,
+            runner_times=runner_times,
             sim_hours=sim_hours,
             num_reps=num_reps
         )

@@ -320,6 +320,11 @@ class Model(sim.Environment):
                     self.processes[insert_point].in_queue.add_sorted(specimen, specimen.prio)
                     self.wips.total.value += 1
 
+        # RUNNER TIMES
+        self.runner_times = None
+        if config.opt_runner_times:
+            self.runner_times = config.runner_times
+
     def run(self) -> None:  # pylint: disable=arguments-differ
         """Run the simulation for the duration set in ``self.sim_length``."""
         super().run(duration=self.sim_length)
