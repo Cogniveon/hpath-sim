@@ -11,10 +11,10 @@ from typing import Literal
 import dacite
 import salabim as sim
 
-from mock_specimens.mock_specimens import InitSpecimen
 from . import process
 from .config import Config, DistributionInfo, IntDistributionInfo, ResourceInfo
 from .distributions import PERT, Constant, Distribution, IntPERT, Tri
+from .mock_specimens import InitSpecimen
 from .process import ArrivalGenerator, ProcessType, ResourceScheduler
 from .util import dc_items
 

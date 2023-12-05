@@ -56,13 +56,13 @@ class ArrivalGenerator(Component):
 
     def process(self) -> None:
         """The generator process. Creates a sub-generator for
-        each hour with the specified rate."""
+        each interval (of length `ARR_RATE_INTERVAL_HOURS`) with the specified rate."""
         for rate in self.iterator:
             if rate > 0:
                 sim.ComponentGenerator(
                     Specimen,
                     generator_name=self.name(),
-                    duration=self.env.hours(1),
+                    duration=self.env.hours(ARR_RATE_INTERVAL_HOURS),
                     iat=sim.Exponential(rate=rate, time_unit="hours", env=self.env),
                     env=self.env,
                     **self.cls_args
