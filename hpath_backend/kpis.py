@@ -51,7 +51,7 @@ def wip_summary(mdl: 'Model') -> pd.DataFrame:
 def _timestamp_helper(mdl: 'Model') -> pd.DataFrame:
     # Actually contains more data than just timestamps but we will ignore those columns
     timestamps = pd.DataFrame.from_dict(
-        {sp.name(): sp.data for sp in mdl.completed_specimens.as_list()},
+        {sp.name(): sp.data for sp in mdl.completed_specimens.as_list() if 'init' not in sp.name()},
         orient='index'
     )
 
@@ -87,8 +87,8 @@ def tat_by_stage(mdl: 'Model') -> pd.DataFrame:
     df.columns = stages
 
     ret = pd.DataFrame({'mean (hours)': df.mean()})
-    ret.index = [wip.name() for wip in util.dc_values(
-        mdl.wips)][1:]  # Remove 'Total' to match ret data
+    ret.index = [wip.name() for wip in
+                 util.dc_values(mdl.wips)][1:]  # Remove 'Total' to match ret data
     return ret
 
 
