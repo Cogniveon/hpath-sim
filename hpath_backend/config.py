@@ -660,7 +660,7 @@ class Config(pyd.BaseModel):
     opt_runner_times: bool = pyd.Field(title='Use travel times')
     """Option to read travel time between locations from file."""
 
-    runner_times: RunnerTimes = pyd.Field(title='Travel times')
+    runner_times: ty.Optional[RunnerTimes] = pyd.Field(title='Travel times')
     """Travel time between locations in the histopathology department."""
 
     @staticmethod
