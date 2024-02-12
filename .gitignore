@@ -9,3 +9,6 @@ venv/
 
 # Redis
 dump.rdb
+
+# Test
+test*/*.out*
