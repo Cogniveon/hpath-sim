@@ -308,8 +308,12 @@ class CollationProcess(Component):
             self.dict[key].append(item)
 
             # Check counter to see if we have all items in the group
+            data = (
+                env.specimen_data[item.parent.name()] if isinstance(item.parent, Specimen)
+                else item.parent.data
+            )
             if len(self.dict[key]) ==\
-                    item.parent.data[self.counter_name]:
+                    data[self.counter_name]:
                 item.parent.enter_sorted(env.processes[self.out_process].in_queue, item.parent)
                 del self.dict[key]
 
@@ -412,4 +416,4 @@ class DeliveryProcess(Component):
             self.release()
 
 
-ProcessType = Union[Process, BatchingProcess, CollationProcess]
+ProcessType = Union[Process, BatchingProcess, CollationProcess, DeliveryProcess]

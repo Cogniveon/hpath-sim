@@ -41,13 +41,12 @@ class Specimen(Component):
         rather than overriding ``__init__()``. The method is called automatically
         immediately after initialisation."""
         env: Model = self.env
-
-        self.data = kwargs
+        env.specimen_data[self.name()] = kwargs
         self.blocks: list[Block] = []
 
-        dist = 'cancer' if self.data['cancer'] else 'non_cancer'
+        dist = 'cancer' if env.specimen_data[self.name()]['cancer'] else 'non_cancer'
 
-        self.data['source'] = sim.CumPdf(
+        env.specimen_data[self.name()]['source'] = sim.CumPdf(
             (
                 "Internal", env.globals.prob_internal,
                 "External", 1
@@ -66,7 +65,7 @@ class Specimen(Component):
             (Priority.CANCER if dist == "cancer" else Priority.ROUTINE),
             1,
         ), env=env).sample()
-        self.data['priority'] = self.prio.name
+        env.specimen_data[self.name()]['priority'] = self.prio.name
 
     def process(self) -> None:
         """Insert specimen into the `in_queue` of its first process."""

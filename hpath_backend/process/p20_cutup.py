@@ -84,7 +84,7 @@ def cutup_start(self: Specimen) -> None:
     """Take specimens arriving at cut-up and sort to the correct cut-up queue."""
     env: Model = self.env
     env.wips.in_cut_up.value += 1
-    self.data['cutup_start'] = env.now()
+    env.specimen_data[self.name()]['cutup_start'] = env.now()
 
     r = env.u01()
     suffix = '_urgent' if self.prio == Priority.URGENT else ''
@@ -96,7 +96,7 @@ def cutup_start(self: Specimen) -> None:
     else:
         cutup_type, next_process = 'Large specimens', 'cutup_large'
 
-    self.data["cutup_type"] = cutup_type
+    env.specimen_data[self.name()]["cutup_type"] = cutup_type
     self.enter_sorted(env.processes[next_process].in_queue, self.prio)
 
 
@@ -113,11 +113,11 @@ def cutup_bms(self: Specimen) -> None:
         block_type='small surgical'
     )
     self.blocks.append(block)
-    self.data['num_blocks'] = 1
+    env.specimen_data[self.name()]['num_blocks'] = 1
 
     self.release()
     env.wips.in_cut_up.value -= 1
-    self.data['cutup_end'] = env.now()
+    env.specimen_data[self.name()]['cutup_end'] = env.now()
 
     if self.prio == Priority.URGENT:
         self.enter(env.processes['cutup_bms_to_processing'].in_queue)
@@ -138,11 +138,11 @@ def cutup_pool(self: Specimen) -> None:
         block_type='large surgical'
     )
     self.blocks.append(block)
-    self.data['num_blocks'] = 1
+    env.specimen_data[self.name()]['num_blocks'] = 1
 
     self.release()
     env.wips.in_cut_up.value -= 1
-    self.data['cutup_end'] = env.now()
+    env.specimen_data[self.name()]['cutup_end'] = env.now()
 
     if self.prio == Priority.URGENT:
         self.enter_sorted(env.processes['cutup_pool_to_processing'].in_queue, Priority.URGENT)
@@ -176,11 +176,11 @@ def cutup_large(self: Specimen) -> None:
         )
         self.blocks.append(block)
 
-    self.data['num_blocks'] = n_blocks
+    env.specimen_data[self.name()]['num_blocks'] = n_blocks
 
     self.release()
     env.wips.in_cut_up.value -= 1
-    self.data['cutup_end'] = env.now()
+    env.specimen_data[self.name()]['cutup_end'] = env.now()
 
     if self.prio == Priority.URGENT:
         self.enter_sorted(env.processes['cutup_large_to_processing'].in_queue, Priority.URGENT)

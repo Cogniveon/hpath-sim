@@ -75,7 +75,7 @@ def scanning_start(self: Specimen) -> None:
     """Entry point for scanning."""
     env: Model = self.env
     env.wips.in_scanning.value += 1
-    self.data['scanning_start'] = env.now()
+    env.specimen_data[self.name()]['scanning_start'] = env.now()
 
     for block in self.blocks:
         for slide in block.slides:
@@ -131,5 +131,5 @@ def post_scanning(self: Specimen) -> None:
     """Post-scanning tasks."""
     env: Model = self.env
     env.wips.in_scanning.value -= 1
-    self.data['scanning_end'] = env.now()
+    env.specimen_data[self.name()]['scanning_end'] = env.now()
     self.enter_sorted(env.processes['batcher.scanning_to_qc'].in_queue, self.prio)

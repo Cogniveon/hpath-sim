@@ -51,7 +51,10 @@ def wip_summary(mdl: 'Model') -> pd.DataFrame:
 def _timestamp_helper(mdl: 'Model') -> pd.DataFrame:
     # Actually contains more data than just timestamps but we will ignore those columns
     timestamps = pd.DataFrame.from_dict(
-        {sp.name(): sp.data for sp in mdl.completed_specimens.as_list() if 'init' not in sp.name()},
+        {
+            # Only keep non-bootstrap specimens that have completed service
+            k: v for k, v in mdl.specimen_data.items() if 'init' not in k and 'report_end' in v
+        },
         orient='index'
     )
 
@@ -212,7 +215,7 @@ class Report(pyd.BaseModel):
     wip_by_stage: MultiChartData
     utilization_by_resource: ChartData
     q_length_by_resource: ChartData
-    hourly_utilization_by_resource: MultiChartData 
+    hourly_utilization_by_resource: MultiChartData
 
     overall_tat_min: float | None = pyd.Field(default=None)
     overall_tat_max: float | None = pyd.Field(default=None)

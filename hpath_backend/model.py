@@ -257,6 +257,9 @@ class Model(sim.Environment):
             env=self
         )
 
+        # SPECIMEN DATA
+        self.specimen_data: dict[str, dict] = {}
+
         # WORK-IN-PROGRESS COUNTERS
         self.wips = Wips(self)
 
@@ -304,16 +307,17 @@ class Model(sim.Environment):
                         for stage2 in stages[:idx]:
                             specimen.preprocess[stage2]()
                         specimen.compute_timestamps()
-                        specimen.data['insert_point'] = insert_point
+                        self.specimen_data[specimen.name()]['insert_point'] = insert_point
 
                         init_specimens.append(specimen)
 
             # Sort by time
-            init_specimens.sort(key=lambda item: item.data.get('reception_start', self.now()))
+            init_specimens.sort(key=lambda item: 
+                                self.specimen_data[item.name()].get('reception_start', self.now()))
 
             # Insert mock specimens
             for specimen in init_specimens:
-                insert_point = specimen.data['insert_point']
+                insert_point = self.specimen_data[specimen.name()]['insert_point']
                 if insert_point == 'arrive_reception':
                     self.processes[insert_point].in_queue.add(specimen)
                 else:

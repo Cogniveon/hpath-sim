@@ -21,13 +21,13 @@ def qc(self: Specimen):
     """Label all slides of a specimen."""
     env: Model = self.env
     env.wips.in_qc.value += 1
-    self.data['qc_start'] = env.now()
+    env.specimen_data[self.name()]['qc_start'] = env.now()
 
     self.request((env.resources.qc_staff, 1, self. prio))
     self.hold(env.task_durations.block_and_quality_check)
     self.release()
 
     env.wips.in_qc.value -= 1
-    self.data['qc_end'] = env.now()
+    env.specimen_data[self.name()]['qc_end'] = env.now()
 
     self.enter(env.processes['assign_histopath'].in_queue)

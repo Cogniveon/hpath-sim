@@ -41,7 +41,7 @@ def arrive_reception(self: Specimen) -> None:
     env.wips.total.value += 1
     env.wips.in_reception.value += 1
 
-    self.data['reception_start'] = env.now()
+    env.specimen_data[self.name()]['reception_start'] = env.now()
 
     # For booking-in staff, receiving new specimens always takes priority
     # over all non-urgent booking-in tasks
@@ -62,13 +62,13 @@ def booking_in(self: Specimen) -> None:
         self.hold(env.task_durations.pre_booking_in_investigation)
 
     # Booking-in
-    if self.data['source'] == 'Internal':
+    if env.specimen_data[self.name()]['source'] == 'Internal':
         self.hold(env.task_durations.booking_in_internal)
     else:
         self.hold(env.task_durations.booking_in_external)
 
     # Additional investigation
-    if self.data['source'] == 'Internal':
+    if env.specimen_data[self.name()]['source'] == 'Internal':
         r = env.u01()
 
         if r < env.globals.prob_invest_easy:
@@ -81,7 +81,7 @@ def booking_in(self: Specimen) -> None:
 
     # Booking-in complete
     self.release()
-    self.data['reception_end'] = env.now()
+    env.specimen_data[self.name()]['reception_end'] = env.now()
     env.wips.in_reception.value -= 1
 
     # Deliver to next stage: individually for Urgents, batched otherwise.

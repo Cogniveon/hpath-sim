@@ -33,13 +33,13 @@ class InitSpecimen(Specimen):
             elapsed_time += env.task_durations.pre_booking_in_investigation()
 
         # Booking-in
-        if self.data['source'] == 'Internal':
+        if env.specimen_data[self.name()]['source'] == 'Internal':
             elapsed_time += env.task_durations.booking_in_internal()
         else:
             elapsed_time += env.task_durations.booking_in_external()
 
         # Additional investigation
-        if self.data['source'] == 'Internal':
+        if env.specimen_data[self.name()]['source'] == 'Internal':
             r = env.u01()
             if r < env.globals.prob_invest_easy:
                 elapsed_time += env.task_durations.booking_in_investigation_internal_easy()
@@ -49,8 +49,8 @@ class InitSpecimen(Specimen):
             elapsed_time += env.task_durations.booking_in_investigation_external()
 
         # End of stage
-        self.data['bootstrap']['reception'] = elapsed_time
-        self.data['bootstrap']['reception_to_cutup']\
+        env.specimen_data[self.name()]['bootstrap']['reception'] = elapsed_time
+        env.specimen_data[self.name()]['bootstrap']['reception_to_cutup']\
             = env.processes['reception_to_cutup'].out_duration
 
     def init_cut_up(self) -> None:
@@ -61,10 +61,10 @@ class InitSpecimen(Specimen):
         r = env.u01()
         suffix = '_urgent' if self.prio == Priority.URGENT else ''
         if r < getattr(env.globals, 'prob_bms_cutup'+suffix):
-            self.data["cutup_type"] = 'BMS'
+            env.specimen_data[self.name()]["cutup_type"] = 'BMS'
 
             # One small surgical block
-            self.data['num_blocks'] = 1
+            env.specimen_data[self.name()]['num_blocks'] = 1
             self.blocks.append(Block(
                 f'{self.name()}.',
                 env=env,
@@ -75,10 +75,10 @@ class InitSpecimen(Specimen):
 
         elif r < (getattr(env.globals, 'prob_bms_cutup'+suffix) +
                   getattr(env.globals, 'prob_pool_cutup'+suffix)):
-            self.data["cutup_type"] = 'Pool'
+            env.specimen_data[self.name()]["cutup_type"] = 'Pool'
 
             # One large surgical block
-            self.data['num_blocks'] = 1
+            env.specimen_data[self.name()]['num_blocks'] = 1
             self.blocks.append(Block(
                 f'{self.name()}.',
                 env=env,
@@ -88,7 +88,7 @@ class InitSpecimen(Specimen):
             elapsed_time = env.task_durations.cut_up_pool()
 
         else:
-            self.data["cutup_type"] = 'Large specimens'
+            env.specimen_data[self.name()]["cutup_type"] = 'Large specimens'
 
             # Urgent cut-ups never produce megas. Other large surgical blocks produce
             # megas with a given probability.
@@ -99,7 +99,7 @@ class InitSpecimen(Specimen):
                 n_blocks = env.globals.num_blocks_large_surgical()
                 block_type = 'large surgical'
 
-            self.data['num_blocks'] = n_blocks
+            env.specimen_data[self.name()]['num_blocks'] = n_blocks
             for _ in range(n_blocks):
                 block = Block(
                     f'{self.name()}.',
@@ -111,15 +111,15 @@ class InitSpecimen(Specimen):
             elapsed_time = env.task_durations.cut_up_large_specimens()
 
         # End of stage
-        self.data['bootstrap']['cutup'] = elapsed_time
-        self.data['bootstrap']['cutup_to_processing'] = (
+        env.specimen_data[self.name()]['bootstrap']['cutup'] = elapsed_time
+        env.specimen_data[self.name()]['bootstrap']['cutup_to_processing'] = (
             env.processes['cutup_bms_to_processing'].out_duration
-            if self.data["cutup_type"] == 'BMS'
+            if env.specimen_data[self.name()]["cutup_type"] == 'BMS'
             else env.processes['cutup_pool_to_processing'].out_duration
-            if self.data["cutup_type"] == 'Pool'
+            if env.specimen_data[self.name()]["cutup_type"] == 'Pool'
             else env.processes['cutup_large_to_processing'].out_duration
         )
-    
+
     # NOTE: to avoid name clashes with regular Specimen processes (which are added to the
     # Specimen using setattr() in each of the `hpath_backend.process` submodules), we must
     # use a "init_" prefix for the functions below.
@@ -136,14 +136,14 @@ class InitSpecimen(Specimen):
         # Decalc
         r = env.u01()
         if r < env.globals.prob_decalc_bone:
-            self.data['decalc_type'] = 'bone station'
+            env.specimen_data[self.name()]['decalc_type'] = 'bone station'
             elapsed_time += (  # Assume no delay; all blocks decalc'ed simultaneously
                 env.task_durations.load_bone_station()
                 + env.task_durations.decalc()
                 + env.task_durations.unload_bone_station()
             )
         elif r < env.globals.prob_decalc_bone + env.globals.prob_decalc_oven:
-            self.data['decalc_type'] = 'decalc oven'
+            env.specimen_data[self.name()]['decalc_type'] = 'decalc oven'
             elapsed_time += (  # Assume no delay; all blocks decalc'ed simultaneously
                 env.task_durations.load_into_decalc_oven()
                 + env.task_durations.decalc()
@@ -165,8 +165,8 @@ class InitSpecimen(Specimen):
         elapsed_time += env.task_durations.unload_processing_machine()
 
         # End of stage
-        self.data['bootstrap']['processing'] = elapsed_time
-        self.data['bootstrap']['processing_to_microtomy'] \
+        env.specimen_data[self.name()]['bootstrap']['processing'] = elapsed_time
+        env.specimen_data[self.name()]['bootstrap']['processing_to_microtomy'] \
             = env.processes['processing_to_microtomy'].out_duration
 
     def init_microtomy(self) -> None:
@@ -178,7 +178,7 @@ class InitSpecimen(Specimen):
         # Slides are microtomed manually
         # Assume no gaps/delays, total elapsed time will be proportional to the number of blocks
         elapsed_time = 0
-        self.data['total_slides'] = 0
+        env.specimen_data[self.name()]['total_slides'] = 0
 
         for block in self.blocks:
             if block.data['block_type'] == 'small surgical':
@@ -209,11 +209,11 @@ class InitSpecimen(Specimen):
                 )
                 block.slides.append(slide)
             block.data['num_slides'] = num_slides
-            self.data['total_slides'] += num_slides
+            env.specimen_data[self.name()]['total_slides'] += num_slides
 
         # End of stage
-        self.data['bootstrap']['microtomy'] = elapsed_time
-        self.data['bootstrap']['microtomy_to_staining'] \
+        env.specimen_data[self.name()]['bootstrap']['microtomy'] = elapsed_time
+        env.specimen_data[self.name()]['bootstrap']['microtomy_to_staining'] \
             = env.processes['microtomy_to_staining'].out_duration
 
     def init_staining(self) -> None:
@@ -241,8 +241,8 @@ class InitSpecimen(Specimen):
             elapsed_time += env.task_durations.unload_coverslip_machine_regular()
 
         # End of stage
-        self.data['bootstrap']['staining'] = elapsed_time
-        self.data['bootstrap']['staining_to_labelling'] \
+        env.specimen_data[self.name()]['bootstrap']['staining'] = elapsed_time
+        env.specimen_data[self.name()]['bootstrap']['staining_to_labelling'] \
             = env.processes['staining_to_labelling'].out_duration
 
     def init_labelling(self) -> None:
@@ -257,8 +257,8 @@ class InitSpecimen(Specimen):
                 elapsed_time += env.task_durations.labelling()
 
         # End of stage
-        self.data['bootstrap']['labelling'] = elapsed_time
-        self.data['bootstrap']['labelling_to_scanning'] \
+        env.specimen_data[self.name()]['bootstrap']['labelling'] = elapsed_time
+        env.specimen_data[self.name()]['bootstrap']['labelling_to_scanning'] \
             = env.processes['labelling_to_scanning'].out_duration
 
     def init_scanning(self) -> None:
@@ -278,21 +278,24 @@ class InitSpecimen(Specimen):
             elapsed_time += env.task_durations.unload_scanning_machine_regular()
 
         # End of stage
-        self.data['bootstrap']['scanning'] = elapsed_time
-        self.data['bootstrap']['scanning_to_qc'] \
+        env.specimen_data[self.name()]['bootstrap']['scanning'] = elapsed_time
+        env.specimen_data[self.name()]['bootstrap']['scanning_to_qc'] \
             = env.processes['scanning_to_qc'].out_duration
 
     def init_qc(self) -> None:
         """Generate task_durations for specimen that has already completed QC
         at simulation start."""
         env: Model = self.env
-        self.data['bootstrap']['qc'] = env.task_durations.block_and_quality_check()
+        env.specimen_data[self.name()]['bootstrap']['qc']\
+            = env.task_durations.block_and_quality_check()
         # Since scans are digital, no need for physical delivery to histopathologist
 
     def setup(self, **kwargs) -> None:
         super().setup(**kwargs)
+        env: Model = self.env
+
         self.insert_point = kwargs.get('insert_point', 'arrive_reception')
-        self.data['bootstrap']: dict[str, float] = {}
+        env.specimen_data[self.name()]['bootstrap']: dict[str, float] = {}
         self.preprocess: dict[str, Callable[[Self], None]] = {
             'reception': self.init_reception,
             'cutup': self.init_cut_up,
@@ -307,46 +310,49 @@ class InitSpecimen(Specimen):
     def compute_timestamps(self) -> None:
         """Compute mock timestamps for the specimen. These are based on the assumption of no
         delays and provide a minimum possible turnaround time for the mock specimen."""
+        env: Model = self.env
+        data = env.specimen_data[self.name()]
+
         timestamp = 0
-        if 'qc' in self.data['bootstrap']:
-            self.data['qc_end'] = timestamp
-            timestamp -= self.data['bootstrap']['qc']
-            self.data['qc_start'] = timestamp
-        if 'scanning' in self.data['bootstrap']:
-            timestamp -= self.data['bootstrap']['scanning_to_qc']
-            self.data['scanning_end'] = timestamp
-            timestamp -= self.data['bootstrap']['scanning']
-            self.data['scanning_start'] = timestamp
-        if 'labelling' in self.data['bootstrap']:
-            timestamp -= self.data['bootstrap']['labelling_to_scanning']
-            self.data['labelling_end'] = timestamp
-            timestamp -= self.data['bootstrap']['labelling']
-            self.data['labelling_start'] = timestamp
-        if 'staining' in self.data['bootstrap']:
-            timestamp -= self.data['bootstrap']['staining_to_labelling']
-            self.data['staining_end'] = timestamp
-            timestamp -= self.data['bootstrap']['staining']
-            self.data['staining_start'] = timestamp
-        if 'microtomy' in self.data['bootstrap']:
-            timestamp -= self.data['bootstrap']['microtomy_to_staining']
-            self.data['microtomy_end'] = timestamp
-            timestamp -= self.data['bootstrap']['microtomy']
-            self.data['microtomy_start'] = timestamp
-        if 'processing' in self.data['bootstrap']:
-            timestamp -= self.data['bootstrap']['processing_to_microtomy']
-            self.data['processing_end'] = timestamp
-            timestamp -= self.data['bootstrap']['processing']
-            self.data['processing_start'] = timestamp
-        if 'cutup' in self.data['bootstrap']:
-            timestamp -= self.data['bootstrap']['cutup_to_processing']
-            self.data['cutup_end'] = timestamp
-            timestamp -= self.data['bootstrap']['cutup']
-            self.data['cutup_start'] = timestamp
-        if 'reception' in self.data['bootstrap']:
-            timestamp -= self.data['bootstrap']['reception_to_cutup']
-            self.data['reception_end'] = timestamp
-            timestamp -= self.data['bootstrap']['reception']
-            self.data['reception_start'] = timestamp
+        if 'qc' in data['bootstrap']:
+            data['qc_end'] = timestamp
+            timestamp -= data['bootstrap']['qc']
+            data['qc_start'] = timestamp
+        if 'scanning' in data['bootstrap']:
+            timestamp -= data['bootstrap']['scanning_to_qc']
+            data['scanning_end'] = timestamp
+            timestamp -= data['bootstrap']['scanning']
+            data['scanning_start'] = timestamp
+        if 'labelling' in data['bootstrap']:
+            timestamp -= data['bootstrap']['labelling_to_scanning']
+            data['labelling_end'] = timestamp
+            timestamp -= data['bootstrap']['labelling']
+            data['labelling_start'] = timestamp
+        if 'staining' in data['bootstrap']:
+            timestamp -= data['bootstrap']['staining_to_labelling']
+            data['staining_end'] = timestamp
+            timestamp -= data['bootstrap']['staining']
+            data['staining_start'] = timestamp
+        if 'microtomy' in data['bootstrap']:
+            timestamp -= data['bootstrap']['microtomy_to_staining']
+            data['microtomy_end'] = timestamp
+            timestamp -= data['bootstrap']['microtomy']
+            data['microtomy_start'] = timestamp
+        if 'processing' in data['bootstrap']:
+            timestamp -= data['bootstrap']['processing_to_microtomy']
+            data['processing_end'] = timestamp
+            timestamp -= data['bootstrap']['processing']
+            data['processing_start'] = timestamp
+        if 'cutup' in data['bootstrap']:
+            timestamp -= data['bootstrap']['cutup_to_processing']
+            data['cutup_end'] = timestamp
+            timestamp -= data['bootstrap']['cutup']
+            data['cutup_start'] = timestamp
+        if 'reception' in data['bootstrap']:
+            timestamp -= data['bootstrap']['reception_to_cutup']
+            data['reception_end'] = timestamp
+            timestamp -= data['bootstrap']['reception']
+            data['reception_start'] = timestamp
         # else, specimen is waiting to start reception and will be assigned a 'reception_start'
         # timestamp of 0 when the simulation starts
 

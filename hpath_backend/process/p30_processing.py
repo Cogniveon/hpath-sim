@@ -128,14 +128,14 @@ def processing_start(self: Specimen) -> None:
     Else, send to queue assignment."""
     env: Model = self.env
     env.wips.in_processing.value += 1
-    self.data['processing_start'] = env.now()
+    env.specimen_data[self.name()]['processing_start'] = env.now()
 
     r = env.u01()
     if r < env.globals.prob_decalc_bone:
-        self.data['decalc_type'] = 'bone station'
+        env.specimen_data[self.name()]['decalc_type'] = 'bone station'
         out_queue = env.processes['batcher.decalc_bone_station'].in_queue
     elif r < env.globals.prob_decalc_bone + env.globals.prob_decalc_oven:
-        self.data['decalc_type'] = 'decalc oven'
+        env.specimen_data[self.name()]['decalc_type'] = 'decalc oven'
         out_queue = env.processes['decalc_oven'].in_queue
     else:
         out_queue = env.processes['processing_assign_queue'].in_queue
@@ -318,7 +318,7 @@ def post_processing(self: Specimen) -> None:
     env: Model = self.env
 
     env.wips.in_processing.value -= 1
-    self.data['processing_end'] = env.now()
+    env.specimen_data[self.name()]['processing_end'] = env.now()
 
     if self.prio == Priority.URGENT:
         self.enter_sorted(env.processes['processing_to_microtomy'].in_queue, Priority.URGENT)

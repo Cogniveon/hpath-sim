@@ -35,7 +35,7 @@ def labelling(self: Specimen) -> None:
     """Label all slides of a specimen."""
     env: Model = self.env
     env.wips.in_labelling.value += 1
-    self.data['labelling_start'] = env.now()
+    env.specimen_data[self.name()]['labelling_start'] = env.now()
 
     self.request((env.resources.microtomy_staff, 1, self. prio))
     for block in self.blocks:
@@ -44,7 +44,7 @@ def labelling(self: Specimen) -> None:
     self.release()
 
     env.wips.in_labelling.value -= 1
-    self.data['labelling_end'] = env.now()
+    env.specimen_data[self.name()]['labelling_end'] = env.now()
 
     if self.prio == Priority.URGENT:
         self.enter_sorted(env.processes['labelling_to_scanning'].in_queue, Priority.URGENT)

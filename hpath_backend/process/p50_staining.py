@@ -76,7 +76,7 @@ def staining_start(self: Specimen) -> None:
     """Create a staining task for each individual slide."""
     env: Model = self.env
     env.wips.in_staining.value += 1
-    self.data['staining_start'] = env.now()
+    env.specimen_data[self.name()]['staining_start'] = env.now()
 
     for block in self.blocks:
         for slide in block.slides:
@@ -150,7 +150,7 @@ def post_staining(self: Specimen) -> None:
     env: Model = self.env
 
     env.wips.in_staining.value -= 1
-    self.data['staining_end'] = env.now()
+    env.specimen_data[self.name()]['staining_end'] = env.now()
 
     if self.prio == Priority.URGENT:
         self.enter_sorted(env.processes['staining_to_labelling'].in_queue, Priority.URGENT)

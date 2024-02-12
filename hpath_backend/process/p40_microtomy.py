@@ -36,8 +36,8 @@ def microtomy(self: Specimen) -> None:
     """Generate all slides for a specimen."""
     env: Model = self.env
     env.wips.in_microtomy.value += 1
-    self.data['microtomy_start'] = env.now()
-    self.data['total_slides'] = 0  # running total
+    env.specimen_data[self.name()]['microtomy_start'] = env.now()
+    env.specimen_data[self.name()]['total_slides'] = 0  # running total
 
     for block in self.blocks:
 
@@ -72,12 +72,12 @@ def microtomy(self: Specimen) -> None:
             )
             block.slides.append(slide)
         block.data['num_slides'] = num_slides
-        self.data['total_slides'] += num_slides
+        env.specimen_data[self.name()]['total_slides'] += num_slides
 
         self.release()
 
     env.wips.in_microtomy.value -= 1
-    self.data['microtomy_end'] = env.now()
+    env.specimen_data[self.name()]['microtomy_end'] = env.now()
 
     if self.prio == Priority.URGENT:
         self.enter_sorted(env.processes['microtomy_to_staining'].in_queue, Priority.URGENT)

@@ -31,14 +31,14 @@ def report(self: Specimen):
     """Write the final histopathological report."""
     env: Model = self.env
     env.wips.in_reporting.value += 1
-    self.data['report_start'] = env.now()
+    env.specimen_data[self.name()]['report_start'] = env.now()
 
     self.request((env.resources.histopathologist, 1, self. prio))
     self.hold(env.task_durations.write_report)
     self.release()
 
     env.wips.in_reporting.value -= 1
-    self.data['report_end'] = env.now()
+    env.specimen_data[self.name()]['report_end'] = env.now()
 
     env.wips.total.value -= 1  # ALL DONE
     self.enter(env.completed_specimens)
