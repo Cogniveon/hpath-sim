@@ -25,11 +25,11 @@ def wip_hourly(wip: sim.Monitor) -> pd.DataFrame:
         .set_index('t')
     df.index = pd.to_timedelta(df.index, 'h')
 
-    df1 = df.resample('H').mean()
+    df1 = df.resample('h').mean()
     df1.index /= pd.Timedelta(1, unit='h')
 
     # handle hour intervals with no WIP changes
-    df2 = df.resample('H').ffill()
+    df2 = df.resample('h').ffill()
     df2.index /= pd.Timedelta(1, unit='h')
     return df1.fillna(df2)
 
@@ -146,11 +146,11 @@ def utilisation_hourly(res: sim.Resource) -> pd.DataFrame:
         .rename(columns={0: 't', 1: res.name()})\
         .set_index('t')
     df.index = pd.to_timedelta(df.index, unit='h')
-    df1 = df.resample('H').mean()
+    df1 = df.resample('h').mean()
     df1.index /= pd.Timedelta(1, unit='h')
 
     # handle hour intervals with no utilisation changes
-    df2 = df.resample('H').ffill()
+    df2 = df.resample('h').ffill()
     df2.index /= pd.Timedelta(1, unit='h')
     return df1.fillna(df2)
 
@@ -171,11 +171,11 @@ def q_length_hourly(res: sim.Resource) -> pd.DataFrame:
         .rename(columns={0: 't', 1: res.name()})\
         .set_index('t')
     df.index = pd.to_timedelta(df.index, unit='h')
-    df1 = df.resample('H').mean()
+    df1 = df.resample('h').mean()
     df1.index /= pd.Timedelta(1, unit='h')
 
     # handle hour intervals with no queue changes
-    df2 = df.resample('H').ffill()
+    df2 = df.resample('h').ffill()
     df2.index /= pd.Timedelta(1, unit='h')
     return df1.fillna(df2)
 
